@@ -1,0 +1,3 @@
+# BillAve
+
+Initial architecture placeholder.
