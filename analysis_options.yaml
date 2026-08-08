@@ -1,0 +1,10 @@
+include: package:lints/recommended.yaml
+
+analyzer:
+  errors:
+    avoid_print: warning
+
+linter:
+  rules:
+    prefer_final_locals: true
+    unnecessary_lambdas: true
