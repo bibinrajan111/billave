@@ -1,0 +1,48 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function tenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    function tenantMember(requestedTenantId) {
+      return signedIn() && tenantId() == requestedTenantId;
+    }
+
+    function hasPermission(permission) {
+      return signedIn()
+        && request.auth.token.permissions is list
+        && permission in request.auth.token.permissions;
+    }
+
+    match /tenants/{tenant}/restaurants/{restaurant}/{document=**} {
+      allow read: if tenantMember(tenant);
+      allow create, update, delete: if tenantMember(tenant) && hasPermission('configuration.manage');
+    }
+
+    match /tenants/{tenant}/menus/{document=**} {
+      allow read: if tenantMember(tenant);
+      allow create, update, delete: if tenantMember(tenant) && hasPermission('menu.edit');
+    }
+
+    match /tenants/{tenant}/orders/{document=**} {
+      allow read: if tenantMember(tenant) && hasPermission('order.view');
+      allow create: if tenantMember(tenant) && hasPermission('order.create');
+      allow update: if tenantMember(tenant) && hasPermission('order.manage');
+      allow delete: if false;
+    }
+
+    match /tenants/{tenant}/auditLogs/{document=**} {
+      allow read: if tenantMember(tenant) && hasPermission('audit.view');
+      allow write: if false;
+    }
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

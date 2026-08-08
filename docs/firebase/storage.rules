@@ -1,0 +1,38 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function tenantId() {
+      return request.auth.token.tenantId;
+    }
+
+    function tenantMember(requestedTenantId) {
+      return signedIn() && tenantId() == requestedTenantId;
+    }
+
+    function hasPermission(permission) {
+      return signedIn()
+        && request.auth.token.permissions is list
+        && permission in request.auth.token.permissions;
+    }
+
+    match /tenants/{tenant}/menu-images/{fileName} {
+      allow read: if tenantMember(tenant);
+      allow write: if tenantMember(tenant)
+        && hasPermission('menu.edit')
+        && request.resource.size < 5 * 1024 * 1024
+        && request.resource.contentType.matches('image/.*');
+    }
+
+    match /tenants/{tenant}/private/{allPaths=**} {
+      allow read, write: if tenantMember(tenant) && hasPermission('configuration.manage');
+    }
+
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
